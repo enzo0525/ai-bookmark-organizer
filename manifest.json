@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "AI Bookmark Organizer",
+  "version": "1.0",
+  "description": "Organize your bookmarks using AI based on your preferences.",
+  "permissions": ["bookmarks", "storage", "activeTab"],
+  "host_permissions": ["https://*/*"],
+  "background": {
+    "service_worker": "./background.js"
+  },
+  "action": {
+    "default_popup": "./popup/popup.html",
+    "default_title": "AI Bookmark Organizer"
+  },
+  "icons": {
+    "16": "icons/icon16.png"
+  }
+}

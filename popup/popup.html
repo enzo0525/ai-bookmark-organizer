@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>🤖 AI Bookmark Organizer</h1>
+
+      <div class="option-group">
+        <label>Choose Organization Style:</label>
+
+        <div class="radio-group">
+          <div class="radio-option" data-value="domain">
+            <input
+              type="radio"
+              id="domain"
+              name="organizationType"
+              value="domain" />
+            <span class="emoji">🌐</span>
+            <div class="radio-text">
+              <div class="radio-title">By Domain</div>
+              <div class="radio-description">
+                Create folders for each website (e.g., YouTube, GitHub, Reddit)
+              </div>
+            </div>
+          </div>
+
+          <div class="radio-option" data-value="category">
+            <input
+              type="radio"
+              id="category"
+              name="organizationType"
+              value="category" />
+            <span class="emoji">📁</span>
+            <div class="radio-text">
+              <div class="radio-title">By Category</div>
+              <div class="radio-description">
+                Group by content type (e.g., Development, News, Entertainment)
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button id="nextBtn" disabled>Continue</button>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
