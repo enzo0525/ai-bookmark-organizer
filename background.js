@@ -147,8 +147,13 @@ function createFolders(folderStructure, bookmarkBar) {
 
 function moveBookmarks(parentId, folder) {
   for (const bookmarkId of folder.children) {
-    chrome.bookmarks.move(bookmarkId, { parentId: parentId });
-    console.log(`Bookmark "${bookmarkId}" moved to "${parentId}"`);
+    chrome.bookmarks.move(
+      (id = String(bookmarkId)),
+      (destination = { parentId: String(parentId) }),
+      (callback = (movedBookmark) => {
+        console.log(`Bookmark "${movedBookmark}" moved to "${parentId}"`);
+      })
+    );
   }
 }
 
