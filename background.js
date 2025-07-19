@@ -4,8 +4,9 @@ const SYSTEM_PROMPT = `
 You are a bookmark organization assistant. Your task is to analyze a user's bookmarks and organize them into a logical folder structure using only bookmark IDs.
 
 ## Input Format
-The user will provide bookmarks in this format:
+The user will provide bookmarks and existing folders in this format:
 
+Bookmarks:
 [
   {
     "id": "123",
@@ -15,6 +16,16 @@ The user will provide bookmarks in this format:
     "parentId": "1"
   },
   // ... more bookmarks
+]
+
+Existing Folders:
+[
+  {
+    "id": "456",
+    "title": "Car videos",
+    "parentId": "1"
+  },
+  // ... more existing folders
 ]
 
 ## Output Format
@@ -76,6 +87,7 @@ You must output a JSON structure with the following rules:
 - Do NOT include bookmark titles or URLs in the output
 - Ensure all provided bookmark IDs are included somewhere in the structure
 - Use logical nesting (max 3-4 levels deep for usability)
+- **REUSE EXISTING FOLDERS**: If there are existing folders that already make sense with appropriate names, do not create new ones. Instead, reuse the existing folder names in your structure. For example, if there's already a folder called "Car videos", don't create another folder with a similar name like "Car content" or "Automotive Videos" - instead, use the existing "Car videos" folder name. Always prioritize reusing existing folder names when they logically fit the content being organized.
 
 `;
 
@@ -85,17 +97,25 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     const { organizationType } = message;
     const bookmarks = await chrome.bookmarks.getTree(); //bookmark tree (all bookmarks)
     const flatBookmarks = flattenBookmarks(bookmarks); //bookmark tree into array
-    const result = await callGeminiAPI(flatBookmarks, organizationType); //structure of bookmarks
+    const existingFolders = extractExistingFolders(bookmarks); //existing folders for reuse
+    const result = await callGeminiAPI(
+      flatBookmarks,
+      organizationType,
+      existingFolders
+    ); //structure of bookmarks
     const bookmarkBar = getBookmarkBar(bookmarks);
-    // createFolders(result, bookmarkBar);
 
     // console.log(`Normal bookmarks: ${JSON.stringify(bookmarks)}`);
     // console.log("--------------------------------");
     // console.log(`Flatten bookmarks: ${JSON.stringify(flatBookmarks)}`);
-    // console.log("--------------------------------");
-    console.log(`Structure: ${result}`);
+    console.log(JSON.stringify(result));
+    console.log("--------------------------------");
 
-    createFolders(result, bookmarkBar);
+    // First create all folders recursively
+    await createFoldersRecursively(result, bookmarkBar);
+
+    // Then move all bookmarks to their proper locations
+    await moveBookmarksRecursively(result, bookmarkBar);
 
     // console.log("Bookmark Bar ID:", bookmarkBar.id);
 
@@ -123,38 +143,135 @@ function getBookmarkBar(bookmarkTree) {
   return bookmarkBar;
 }
 
-function createFolders(folderStructure, bookmarkBar) {
+async function createFoldersRecursively(folderStructure, bookmarkBar) {
+  const folders = folderStructure.bookmarks.folders;
+
+  // Create folders using DFS to ensure parent folders are created before children
+  for (const folder of folders) {
+    await createFolderDFS(folder, bookmarkBar.id);
+  }
+}
+
+async function createFolderDFS(folderDef, parentId) {
+  // Check if folder already exists
+  const existingFolder = await findExistingFolderAsync(
+    parentId,
+    folderDef.name
+  );
+
+  let folderId;
+  if (!existingFolder) {
+    // Create new folder
+    const newFolder = await createFolderAsync(parentId, folderDef.name);
+    folderId = newFolder.id;
+    console.log(`Folder "${newFolder.title}" created with ID: ${folderId}`);
+  } else {
+    folderId = existingFolder.id;
+    console.log(
+      `Folder "${folderDef.name}" already exists with ID: ${folderId}`
+    );
+  }
+
+  // Recursively create child folders
+  for (const child of folderDef.children) {
+    if (typeof child === "object" && child.name) {
+      // This is a nested folder
+      await createFolderDFS(child, folderId);
+    }
+    // If child is a string, it's a bookmark ID - we'll handle these in moveBookmarksRecursively
+  }
+}
+
+async function moveBookmarksRecursively(folderStructure, bookmarkBar) {
+  // Move bookmarks to bookmark bar
+  const bookmarkBarChildren =
+    folderStructure.bookmarks.bookmark_bar?.children || [];
+  for (const bookmarkId of bookmarkBarChildren) {
+    await moveBookmarkAsync(bookmarkId, bookmarkBar.id);
+  }
+
+  // Move bookmarks to folders
   const folders = folderStructure.bookmarks.folders;
   for (const folder of folders) {
-    // Check if folder already exists
-    const existingFolder = findExistingFolder(bookmarkBar, folder.name);
-
+    const existingFolder = await findExistingFolderAsync(
+      bookmarkBar.id,
+      folder.name
+    );
     if (existingFolder) {
-      // Move bookmarks to existing folder
-      moveBookmarks(existingFolder.id, folder);
-    } else {
-      // Create new folder
-      chrome.bookmarks.create(
-        { parentId: bookmarkBar.id, title: folder.name },
-        function (newFolder) {
-          console.log("Folder created:", newFolder.title);
-          moveBookmarks(newFolder.id, folder);
-        }
-      );
+      await moveBookmarksDFS(folder, existingFolder.id);
     }
   }
 }
 
-function moveBookmarks(parentId, folder) {
-  for (const bookmarkId of folder.children) {
-    chrome.bookmarks.move(
-      (id = String(bookmarkId)),
-      (destination = { parentId: String(parentId) }),
-      (callback = (movedBookmark) => {
-        console.log(`Bookmark "${movedBookmark}" moved to "${parentId}"`);
-      })
-    );
+async function moveBookmarksDFS(folderDef, parentId) {
+  for (const child of folderDef.children) {
+    if (typeof child === "string") {
+      // This is a bookmark ID
+      await moveBookmarkAsync(child, parentId);
+    } else if (typeof child === "object" && child.name) {
+      // This is a nested folder
+      const childFolder = await findExistingFolderAsync(parentId, child.name);
+      if (childFolder) {
+        await moveBookmarksDFS(child, childFolder.id);
+      }
+    }
   }
+}
+
+// Helper function to create folder with promise
+function createFolderAsync(parentId, title) {
+  return new Promise((resolve, reject) => {
+    chrome.bookmarks.create(
+      {
+        parentId: parentId,
+        title: title,
+      },
+      (newFolder) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve(newFolder);
+        }
+      }
+    );
+  });
+}
+
+// Helper function to move bookmark with promise
+function moveBookmarkAsync(bookmarkId, parentId) {
+  return new Promise((resolve, reject) => {
+    chrome.bookmarks.move(
+      String(bookmarkId),
+      { parentId: String(parentId) },
+      (movedBookmark) => {
+        if (chrome.runtime.lastError) {
+          console.error(
+            `Error moving bookmark "${bookmarkId}": ${chrome.runtime.lastError.message}`
+          );
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          console.log(`Bookmark "${bookmarkId}" moved to "${parentId}"`);
+          resolve(movedBookmark);
+        }
+      }
+    );
+  });
+}
+
+// Helper function to find existing folder with promise
+function findExistingFolderAsync(parentId, folderName) {
+  return new Promise((resolve, reject) => {
+    chrome.bookmarks.getChildren(parentId, (children) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message));
+      } else {
+        const existingFolder = children.find(
+          (child) => !child.url && child.title === folderName
+        );
+        resolve(existingFolder || null);
+      }
+    });
+  });
 }
 
 function findExistingFolder(bookmarkBar, folderName) {
@@ -206,19 +323,51 @@ function flattenBookmarks(bookmarkTree) {
   return flatBookmarks;
 }
 
-async function callGeminiAPI(flatBookmarks, organizationType) {
+function extractExistingFolders(bookmarkTree) {
+  const existingFolders = [];
+
+  function traverse(nodes) {
+    for (const node of nodes) {
+      // If it's a folder (no URL but has children), add to result
+      if (!node.url && node.children) {
+        // Skip system folders (root, bookmark bar, other bookmarks, mobile)
+        if (
+          node.id !== "0" &&
+          node.id !== "1" &&
+          node.id !== "2" &&
+          node.id !== "3"
+        ) {
+          existingFolders.push({
+            id: node.id,
+            title: node.title,
+            parentId: node.parentId,
+          });
+        }
+        // Recurse into folder children
+        traverse(node.children);
+      }
+    }
+  }
+  traverse(bookmarkTree);
+  return existingFolders;
+}
+
+async function callGeminiAPI(flatBookmarks, organizationType, existingFolders) {
   const GEMINI_API_KEY = "AIzaSyB_a2rgHz_xL2SjIpbzFIYNgZbSBmr3f70";
   const GEMINI_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
-  // Create the user content with bookmarks data
+  // Create the user content with bookmarks and existing folders data
   const userContent = `
     Organization Type: ${organizationType}
 
     Bookmarks to organize:
     ${JSON.stringify(flatBookmarks, null, 2)}
 
-    Please organize these bookmarks according to the system instructions.
+    Existing Folders:
+    ${JSON.stringify(existingFolders, null, 2)}
+
+    Please organize these bookmarks according to the system instructions. Remember to reuse existing folder names when they make sense instead of creating new ones with similar names.
     `;
 
   const requestBody = {
