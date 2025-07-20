@@ -92,12 +92,26 @@ You must output a JSON structure with the following rules:
 `;
 
 //Listener when popup.js sends a message with parameters
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "organizeBookmarks") {
+    // Handle the async operation
+    handleOrganizeBookmarks(message, sendResponse);
+    // Return true to indicate we'll send a response asynchronously
+    return true;
+  }
+});
+
+async function handleOrganizeBookmarks(message, sendResponse) {
+  try {
     const { organizationType } = message;
+    console.log("Starting bookmark organization with type:", organizationType);
+
     const bookmarks = await chrome.bookmarks.getTree(); //bookmark tree (all bookmarks)
     const flatBookmarks = flattenBookmarks(bookmarks); //bookmark tree into array
     const existingFolders = extractExistingFolders(bookmarks); //existing folders for reuse
+
+    console.log(`Found ${flatBookmarks.length} bookmarks to organize`);
+
     const result = await callGeminiAPI(
       flatBookmarks,
       organizationType,
@@ -105,10 +119,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     ); //structure of bookmarks
     const bookmarkBar = getBookmarkBar(bookmarks);
 
-    // console.log(`Normal bookmarks: ${JSON.stringify(bookmarks)}`);
-    // console.log("--------------------------------");
-    // console.log(`Flatten bookmarks: ${JSON.stringify(flatBookmarks)}`);
-    console.log(JSON.stringify(result));
+    console.log("AI organization result:", JSON.stringify(result));
     console.log("--------------------------------");
 
     // First create all folders recursively
@@ -117,15 +128,21 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     // Then move all bookmarks to their proper locations
     await moveBookmarksRecursively(result, bookmarkBar);
 
-    // console.log("Bookmark Bar ID:", bookmarkBar.id);
+    console.log("Bookmark organization completed successfully");
 
-    // if (organizationType === "domain") {
-    //   console.log("Organizing bookmarks by domain...");
-    // } else if (organizationType === "category") {
-    //   console.log("Organizing bookmarks by category...");
-    // }
+    // Send success response
+    sendResponse({
+      success: true,
+      message: "Bookmarks organized successfully",
+    });
+  } catch (error) {
+    console.error("Error organizing bookmarks:", error);
+    sendResponse({
+      success: false,
+      error: error.message || "An unknown error occurred",
+    });
   }
-});
+}
 
 function getBookmarkBar(bookmarkTree) {
   // The bookmark tree structure: [{ id: "0", children: [bookmarkBar, otherBookmarks, mobile] }]
@@ -353,7 +370,16 @@ function extractExistingFolders(bookmarkTree) {
 }
 
 async function callGeminiAPI(flatBookmarks, organizationType, existingFolders) {
-  const GEMINI_API_KEY = "AIzaSyB_a2rgHz_xL2SjIpbzFIYNgZbSBmr3f70";
+  // TODO: For production, you should:
+  // 1. Use environment variables or secure storage
+  // 2. Implement API key rotation
+  // 3. Consider using a backend proxy to hide the API key
+  // 4. Add rate limiting and usage monitoring
+
+  // Replace this with your actual API key for development
+  // For production, use a secure method to store/retrieve the API key
+  const GEMINI_API_KEY = "AIzaSyB_a2rgHz_xL2SjIpbzFIYNgZbSBmr3f70"; // Replace with actual key for testing
+
   const GEMINI_URL =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 

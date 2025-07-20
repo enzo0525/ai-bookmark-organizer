@@ -6,7 +6,10 @@
   </head>
   <body>
     <div class="container">
-      <h1>🤖 AI Bookmark Organizer</h1>
+      <div class="header">
+        <h1>🤖 AI Bookmark Organizer</h1>
+        <button class="close-btn" id="closeBtn" title="Close">×</button>
+      </div>
 
       <div class="option-group">
         <label>Choose Organization Style:</label>
@@ -17,7 +20,8 @@
               type="radio"
               id="domain"
               name="organizationType"
-              value="domain" />
+              value="domain"
+            />
             <span class="emoji">🌐</span>
             <div class="radio-text">
               <div class="radio-title">By Domain</div>
@@ -32,7 +36,8 @@
               type="radio"
               id="category"
               name="organizationType"
-              value="category" />
+              value="category"
+            />
             <span class="emoji">📁</span>
             <div class="radio-text">
               <div class="radio-title">By Category</div>
@@ -45,6 +50,15 @@
       </div>
 
       <button id="nextBtn" disabled>Continue</button>
+
+      <!-- Loading State -->
+      <div id="loadingState" class="loading-container" style="display: none">
+        <div class="loading-content">
+          <div class="loading-spinner"></div>
+          <p>🤖 AI is organizing your bookmarks...</p>
+          <p class="loading-subtitle">This may take a few moments</p>
+        </div>
+      </div>
     </div>
 
     <script src="popup.js"></script>
