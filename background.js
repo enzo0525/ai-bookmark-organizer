@@ -93,18 +93,24 @@ You must output a JSON structure with the following rules:
 
 //Listener when popup.js sends a message with parameters
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "organizeBookmarks") {
-    // Handle the async operation
-    handleOrganizeBookmarks(message, sendResponse);
-    // Return true to indicate we'll send a response asynchronously
+  if (message.action === "generatePreview") {
+    // Handle the async operation for preview generation
+    handleGeneratePreview(message, sendResponse);
+    return true;
+  } else if (message.action === "executeOrganization") {
+    // Handle the async operation for actual organization
+    handleExecuteOrganization(message, sendResponse);
     return true;
   }
 });
 
-async function handleOrganizeBookmarks(message, sendResponse) {
+async function handleGeneratePreview(message, sendResponse) {
   try {
     const { organizationType } = message;
-    console.log("Starting bookmark organization with type:", organizationType);
+    console.log(
+      "Generating bookmark organization preview with type:",
+      organizationType
+    );
 
     const bookmarks = await chrome.bookmarks.getTree(); //bookmark tree (all bookmarks)
     const flatBookmarks = flattenBookmarks(bookmarks); //bookmark tree into array
@@ -117,16 +123,40 @@ async function handleOrganizeBookmarks(message, sendResponse) {
       organizationType,
       existingFolders
     ); //structure of bookmarks
+
+    console.log("AI organization preview result:", result);
+
+    // Create a readable preview structure
+    const previewData = createPreviewData(result, flatBookmarks);
+
+    // Send success response with preview data
+    sendResponse({
+      success: true,
+      preview: previewData,
+      organizationStructure: result, // Store for later execution
+    });
+  } catch (error) {
+    console.error("Error generating preview:", error);
+    sendResponse({
+      success: false,
+      error: error.message || "An unknown error occurred",
+    });
+  }
+}
+
+async function handleExecuteOrganization(message, sendResponse) {
+  try {
+    const { organizationStructure } = message;
+    console.log("Executing bookmark organization");
+
+    const bookmarks = await chrome.bookmarks.getTree();
     const bookmarkBar = getBookmarkBar(bookmarks);
 
-    console.log("AI organization result:", JSON.stringify(result));
-    console.log("--------------------------------");
-
     // First create all folders recursively
-    await createFoldersRecursively(result, bookmarkBar);
+    await createFoldersRecursively(organizationStructure, bookmarkBar);
 
     // Then move all bookmarks to their proper locations
-    await moveBookmarksRecursively(result, bookmarkBar);
+    await moveBookmarksRecursively(organizationStructure, bookmarkBar);
 
     console.log("Bookmark organization completed successfully");
 
@@ -142,6 +172,67 @@ async function handleOrganizeBookmarks(message, sendResponse) {
       error: error.message || "An unknown error occurred",
     });
   }
+}
+
+function createPreviewData(organizationStructure, flatBookmarks) {
+  // Create a map of bookmark IDs to bookmark data for quick lookup
+  const bookmarkMap = {};
+  flatBookmarks.forEach((bookmark) => {
+    bookmarkMap[bookmark.id] = bookmark;
+  });
+
+  const preview = {
+    bookmarkBar: [],
+    folders: [],
+  };
+
+  // Process bookmark bar items
+  if (organizationStructure.bookmarks.bookmark_bar?.children) {
+    organizationStructure.bookmarks.bookmark_bar.children.forEach(
+      (bookmarkId) => {
+        if (bookmarkMap[bookmarkId]) {
+          preview.bookmarkBar.push({
+            title: bookmarkMap[bookmarkId].title,
+            url: bookmarkMap[bookmarkId].url,
+            domain: bookmarkMap[bookmarkId].domain,
+          });
+        }
+      }
+    );
+  }
+
+  // Process folders
+  organizationStructure.bookmarks.folders.forEach((folder) => {
+    preview.folders.push(processFolder(folder, bookmarkMap));
+  });
+
+  return preview;
+}
+
+function processFolder(folderDef, bookmarkMap) {
+  const folder = {
+    name: folderDef.name,
+    bookmarks: [],
+    subfolders: [],
+  };
+
+  folderDef.children.forEach((child) => {
+    if (typeof child === "string") {
+      // This is a bookmark ID
+      if (bookmarkMap[child]) {
+        folder.bookmarks.push({
+          title: bookmarkMap[child].title,
+          url: bookmarkMap[child].url,
+          domain: bookmarkMap[child].domain,
+        });
+      }
+    } else if (typeof child === "object" && child.name) {
+      // This is a nested folder
+      folder.subfolders.push(processFolder(child, bookmarkMap));
+    }
+  });
+
+  return folder;
 }
 
 function getBookmarkBar(bookmarkTree) {

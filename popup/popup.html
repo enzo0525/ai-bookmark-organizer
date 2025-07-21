@@ -11,52 +11,75 @@
         <button class="close-btn" id="closeBtn" title="Close">×</button>
       </div>
 
-      <div class="option-group">
-        <label>Choose Organization Style:</label>
+      <!-- Initial Selection View -->
+      <div id="selectionView">
+        <div class="option-group">
+          <label>Choose Organization Style:</label>
 
-        <div class="radio-group">
-          <div class="radio-option" data-value="domain">
-            <input
-              type="radio"
-              id="domain"
-              name="organizationType"
-              value="domain"
-            />
-            <span class="emoji">🌐</span>
-            <div class="radio-text">
-              <div class="radio-title">By Domain</div>
-              <div class="radio-description">
-                Create folders for each website (e.g., YouTube, GitHub, Reddit)
+          <div class="radio-group">
+            <div class="radio-option" data-value="domain">
+              <input
+                type="radio"
+                id="domain"
+                name="organizationType"
+                value="domain" />
+              <span class="emoji">🌐</span>
+              <div class="radio-text">
+                <div class="radio-title">By Domain</div>
+                <div class="radio-description">
+                  Create folders for each website (e.g., YouTube, GitHub,
+                  Reddit)
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="radio-option" data-value="category">
-            <input
-              type="radio"
-              id="category"
-              name="organizationType"
-              value="category"
-            />
-            <span class="emoji">📁</span>
-            <div class="radio-text">
-              <div class="radio-title">By Category</div>
-              <div class="radio-description">
-                Group by content type (e.g., Development, News, Entertainment)
+            <div class="radio-option" data-value="category">
+              <input
+                type="radio"
+                id="category"
+                name="organizationType"
+                value="category" />
+              <span class="emoji">📁</span>
+              <div class="radio-text">
+                <div class="radio-title">By Category</div>
+                <div class="radio-description">
+                  Group by content type (e.g., Development, News, Entertainment)
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <button id="previewBtn" disabled>Generate Preview</button>
       </div>
 
-      <button id="nextBtn" disabled>Continue</button>
+      <!-- Preview View -->
+      <div id="previewView" style="display: none">
+        <div class="preview-header">
+          <h2>📋 Organization Preview</h2>
+          <p class="preview-subtitle">
+            Review how your bookmarks will be organized:
+          </p>
+        </div>
+
+        <div class="preview-content" id="previewContent">
+          <!-- Preview content will be dynamically generated -->
+        </div>
+
+        <div class="preview-actions">
+          <button id="cancelBtn" class="secondary-btn">Cancel</button>
+          <button id="acceptBtn" class="primary-btn">Apply Organization</button>
+        </div>
+      </div>
 
       <!-- Loading State -->
       <div id="loadingState" class="loading-container" style="display: none">
         <div class="loading-content">
           <div class="loading-spinner"></div>
-          <p>🤖 AI is organizing your bookmarks...</p>
-          <p class="loading-subtitle">This may take a few moments</p>
+          <p id="loadingText">🤖 AI is organizing your bookmarks...</p>
+          <p class="loading-subtitle" id="loadingSubtext">
+            This may take a few moments
+          </p>
         </div>
       </div>
     </div>

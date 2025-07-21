@@ -14,6 +14,7 @@ body {
   padding: 20px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
+  min-height: 400px;
 }
 
 .header {
@@ -51,6 +52,12 @@ h1 {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+h2 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  text-align: center;
 }
 
 .option-group {
@@ -120,6 +127,105 @@ label {
   margin-right: 12px;
 }
 
+/* Preview Styles */
+.preview-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.preview-subtitle {
+  font-size: 14px;
+  opacity: 0.8;
+  margin: 0;
+}
+
+.preview-content {
+  max-height: 300px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.bookmark-bar-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.folder-item {
+  margin-bottom: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.folder-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #e0e7ff;
+}
+
+.bookmark-list {
+  margin-left: 0;
+}
+
+.bookmark-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+  opacity: 0.9;
+  gap: 6px;
+}
+
+.bookmark-favicon {
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.bookmark-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.bookmark-domain {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.subfolder {
+  margin-left: 15px;
+  margin-top: 10px;
+  border-left: 2px solid rgba(255, 255, 255, 0.2);
+  padding-left: 10px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Button Styles */
 button {
   width: 100%;
   padding: 12px;
@@ -134,9 +240,28 @@ button {
   margin-top: 20px;
 }
 
+.primary-btn {
+  background: linear-gradient(45deg, #10b981, #059669);
+  margin-top: 0;
+}
+
+.secondary-btn {
+  background: linear-gradient(45deg, #6b7280, #4b5563);
+  margin-top: 0;
+}
+
+.preview-actions button {
+  flex: 1;
+  margin-top: 0;
+}
+
 button:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.secondary-btn:hover {
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
 }
 
 button:disabled {
@@ -200,4 +325,23 @@ button:disabled {
   font-size: 14px !important;
   opacity: 0.7;
   font-weight: 400 !important;
+}
+
+/* Scrollbar Styles */
+.preview-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.preview-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.preview-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.preview-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
