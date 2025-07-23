@@ -82,7 +82,7 @@ You must output a JSON structure with the following rules:
   - Career/Professional
 
 ## Important Rules:
-- Output ONLY the JSON file, without any markdown formatting
+- Output ONLY the JSON file, without any markdown formatting (DO NOT INCLUDE \`\`\`json", "\`\`\`", or ANYTHING other than the actual JSON)
 - Include ONLY bookmark IDs in children arrays
 - Do NOT include bookmark titles or URLs in the output
 - Ensure all provided bookmark IDs are included somewhere in the structure
@@ -519,7 +519,11 @@ async function callGeminiAPI(flatBookmarks, organizationType, existingFolders) {
     const data = await response.json();
     const fileStructure = data.candidates[0].content.parts[0].text;
 
+    console.log("Gemini API response:", fileStructure);
+    console.log("--------------------------------");
+
     const dataToJSON = JSON.parse(fileStructure);
+    console.log("Parsed JSON:", dataToJSON);
     return dataToJSON;
   } catch (error) {
     console.error("Error calling Gemini API:", error);
